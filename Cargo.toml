@@ -1,0 +1,9 @@
+[package]
+name = "timetable"
+version = "0.1.0"
+authors = ["Vincent Ollivier <v@vinc.cc>"]
+
+[dependencies]
+transitfeed = { git = "https://github.com/bfrog/transitfeed" }
+chrono = "0.4.0"
+getopts = "0.2.15"
