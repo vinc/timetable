@@ -7,3 +7,4 @@ authors = ["Vincent Ollivier <v@vinc.cc>"]
 transitfeed = { git = "https://github.com/bfrog/transitfeed" }
 chrono = "0.4.0"
 getopts = "0.2.15"
+colored = "1.6.0"

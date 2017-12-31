@@ -1,14 +1,13 @@
-extern crate transitfeed;
-extern crate chrono;
-extern crate getopts;
+extern crate transitfeed; extern crate chrono; extern crate colored; extern crate getopts;
 
-use transitfeed::{GTFSIterator, Route, RouteType, Stop, StopTime, Trip, Calendar};
 use chrono::DateTime;
 use chrono::prelude::*;
+use colored::Colorize;
 use getopts::Options;
-use std::env;
 use std::collections::HashMap;
+use std::env;
 use std::path::Path;
+use transitfeed::{GTFSIterator, Route, RouteType, Stop, StopTime, Trip, Calendar};
 
 #[derive(PartialEq)]
 enum Step {
@@ -24,35 +23,43 @@ pub struct Service {
     pub long_name: String
 }
 
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
+pub struct Station {
+    pub name: String
+}
+
 pub struct Search {
     path: String,
-    pub from: Option<String>,
-    pub to: Option<String>,
-    pub at: DateTime<Local>,
-    pub results: Option<Vec<Service>>
+    debug: bool
 }
 
 impl Search {
-    pub fn new(path: String, from: String, to: String, at: DateTime<Local>) -> Search {
-        Search {
-            path: path,
-            from: Some(from),
-            to: Some(to),
-            at: at,
-            results: None
-        }
+    pub fn new(path: String) -> Search {
+        let debug = false;
+        Search { path, debug }
     }
 
-    pub fn run(&mut self) {
-        let debug = false;
-        let departure_name = &self.from.clone().unwrap();
-        let arrival_name = &self.to.clone().unwrap();
+    pub fn stations(&self) -> Vec<Station> {
+        let mut results = Vec::new();
+        let path = Path::new(&self.path).join("stops.txt");
+        let iter: GTFSIterator<_, Stop> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
+        for result in iter {
+            if let Ok(entry) = result {
+                let name = entry.stop_name;
+                let station = Station { name };
+                results.push(station);
+            }
+        }
+        results.sort();
+        results.dedup();
+        results
+    }
 
+    pub fn timetable(&self, from: &str, to: &str, at: DateTime<Local>) -> Vec<Service> {
         let mut stop_ids = HashMap::new();
-        self.from = None;
-        self.to = None;
-
         let mut n = 0;
+        let mut origins = Vec::new();
+        let mut destinations = Vec::new();
         let path = Path::new(&self.path).join("stops.txt");
         let iter: GTFSIterator<_, Stop> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
         for result in iter {
@@ -60,17 +67,23 @@ impl Search {
             if let Ok(entry) = result {
                 let name = entry.stop_name.to_lowercase();
 
-                if name.contains(departure_name) {
+                if name.contains(from) {
                     stop_ids.insert(entry.stop_id, Step::Departure);
-                    self.from = Some(entry.stop_name);
-                } else if name.contains(arrival_name) {
+                    origins.push(entry.stop_name);
+                } else if name.contains(to) {
                     stop_ids.insert(entry.stop_id, Step::Arrival);
-                    self.to = Some(entry.stop_name);
+                    destinations.push(entry.stop_name);
                 }
             }
         }
-        if debug {
-            println!("Loaded {} stops", n);
+        if self.debug {
+            origins.sort();
+            origins.dedup();
+            destinations.sort();
+            destinations.dedup();
+            println!("{}: origins: {}", "Debug".cyan(), origins.join(", "));
+            println!("{}: destinations: {}", "Debug".cyan(), destinations.join(", "));
+            println!("{}: loaded {} stops", "Debug".cyan(), n);
         }
 
         let mut departure_stop_times = Vec::new();
@@ -88,17 +101,17 @@ impl Search {
                 }
             }
         }
-        if debug {
-            println!("Loaded {} stop times", n);
+        if self.debug {
+            println!("{}: loaded {} stop times", "Debug".cyan(), n);
         }
 
-        let date = self.at.date().naive_local();
-        let midnight = self.at.date().and_hms(0, 0, 0);
+        let date = at.date().naive_local();
+        let midnight = at.date().and_hms(0, 0, 0);
 
         let mut trip_ids = HashMap::new();
         for stop_time in departure_stop_times {
             let departure = midnight + stop_time.departure_time.duration();
-            if departure > self.at {
+            if departure > at {
                 trip_ids.insert(stop_time.trip_id, departure);
             }
         }
@@ -122,8 +135,8 @@ impl Search {
                 }
             }
         }
-        if debug {
-            println!("Loaded {} trips", n);
+        if self.debug {
+            println!("{}: loaded {} trips", "Debug".cyan(), n);
         }
 
         let mut routes = HashMap::new();
@@ -139,8 +152,8 @@ impl Search {
                 }
             }
         }
-        if debug {
-            println!("Loaded {} routes", n);
+        if self.debug {
+            println!("{}: loaded {} routes", "Debug".cyan(), n);
         }
 
         let mut services = HashMap::new();
@@ -170,11 +183,11 @@ impl Search {
                 }
             }
         }
-        if debug {
-            println!("Loaded {} calendars", n);
+        if self.debug {
+            println!("{}: loaded {} calendars", "Debug".cyan(), n);
         }
 
-        let mut res = Vec::new();
+        let mut results = Vec::new();
         for stop_time in arrival_stop_times {
             let trip_id = stop_time.trip_id;
             if let Some(departure) = trip_ids.get(&trip_id) {
@@ -205,18 +218,19 @@ impl Search {
                                 short_name,
                                 long_name
                             };
-                            res.push(service);
+                            results.push(service);
                         }
                     }
                 }
             }
         }
 
-        if debug {
+        if self.debug {
             println!("");
         }
-        res.sort_by(|a, b| a.departure.cmp(&b.departure));
-        self.results = if res.len() > 0 { Some(res) } else { None };
+        results.sort_by(|a, b| a.departure.cmp(&b.departure));
+
+        results
     }
 }
 
@@ -238,7 +252,7 @@ fn main() {
     opts.optopt("f",  "from",    "depart from", "NAME");
     opts.optopt("t",  "to",      "arrive to",   "NAME");
     opts.optopt("a",  "at",      "depart at",   "TIME");
-    //opts.optflag("d", "debug",   "enable debug output");
+    opts.optflag("d", "debug",   "enable debug output");
     opts.optflag("h", "help",    "print this message");
     opts.optflag("v", "version", "print version");
 
@@ -262,6 +276,12 @@ fn main() {
         if let Some(s) = matches.opt_str("g") {
             path = s;
         }
+    }
+
+    let mut search = Search::new(path);
+
+    if matches.opt_present("d") {
+        search.debug = true;
     }
 
     let mut from = String::new();
@@ -289,27 +309,24 @@ fn main() {
         }
     }
 
-    let mut search = Search::new(path, from, to, at);
-    
-    search.run();
-    println!("From: {}", search.from.unwrap_or("not found".into()));
-    println!("To: {}", search.to.unwrap_or("not found".into()));
-    match search.results {
-        None => {
-            println!("Results: not found");
-        },
-        Some(results) => {
-            println!("Results:");
-            for service in results.iter().take(5) {
-                println!(
-                    "  {} -> {} ({} {} - {})",
-                    service.departure.format("%H:%M"),
-                    service.arrival.format("%H:%M"),
-                    service.vehicule,
-                    service.short_name,
-                    service.long_name
-                );
-            }
+    if from.len() > 0 && to.len() > 0 {
+        let results = search.timetable(&from, &to, at);
+        println!("{:13}{:11}{}", "Departures".bold(), "Arrivals".bold(), "Routes".bold());
+        for service in results.iter().take(5) {
+            let short = service.short_name.clone();
+            let long = service.long_name.clone();
+            println!(
+                "{:13}{:11}{}",
+                service.departure.format("%H:%M").to_string(),
+                service.arrival.format("%H:%M").to_string(),
+                vec![short, long].join(" - ")
+            );
+        }
+    } else {
+        let results = search.stations();
+        println!("{}", "Stations".bold());
+        for station in results {
+            println!("{}", station.name);
         }
     }
 }
