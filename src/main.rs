@@ -83,7 +83,7 @@ impl Search {
             destinations.dedup();
             println!("{}: origins: {}", "Debug".cyan(), origins.join(", "));
             println!("{}: destinations: {}", "Debug".cyan(), destinations.join(", "));
-            println!("{}: loaded {} stops", "Debug".cyan(), n);
+            println!("{}: loaded {} stops ({} retained)", "Debug".cyan(), n, stop_ids.len());
         }
 
         let mut departure_stop_times = Vec::new();
@@ -102,7 +102,8 @@ impl Search {
             }
         }
         if self.debug {
-            println!("{}: loaded {} stop times", "Debug".cyan(), n);
+            let total = departure_stop_times.len() + arrival_stop_times.len();
+            println!("{}: loaded {} stop times ({} retained)", "Debug".cyan(), n, total);
         }
 
         let date = at.date().naive_local();
@@ -136,7 +137,7 @@ impl Search {
             }
         }
         if self.debug {
-            println!("{}: loaded {} trips", "Debug".cyan(), n);
+            println!("{}: loaded {} trips ({} retained)", "Debug".cyan(), n, trips.len());
         }
 
         let mut routes = HashMap::new();
@@ -153,7 +154,7 @@ impl Search {
             }
         }
         if self.debug {
-            println!("{}: loaded {} routes", "Debug".cyan(), n);
+            println!("{}: loaded {} routes ({} retained)", "Debug".cyan(), n, routes.len());
         }
 
         let mut services = HashMap::new();
@@ -184,7 +185,7 @@ impl Search {
             }
         }
         if self.debug {
-            println!("{}: loaded {} calendars", "Debug".cyan(), n);
+            println!("{}: loaded {} services ({} retained)", "Debug".cyan(), n, services.len());
         }
 
         let mut results = Vec::new();
@@ -195,7 +196,7 @@ impl Search {
                 let departure = *departure;
                 if arrival > departure {
                     if let Some(trip) = trips.get(&trip_id) {
-                        if !services.contains_key(&trip.service_id) {
+                        if !services.is_empty() && !services.contains_key(&trip.service_id) {
                             continue;
                         }
                         if let Some(route) = routes.get(&trip.route_id) {
