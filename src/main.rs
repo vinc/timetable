@@ -249,7 +249,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let mut opts = Options::new();
-    opts.optopt("g",  "gtfs",    "gtfs path",   "PATH");
+    opts.optopt("p",  "path",    "gtfs path",   "GTFS");
     opts.optopt("f",  "from",    "depart from", "NAME");
     opts.optopt("t",  "to",      "arrive to",   "NAME");
     opts.optopt("a",  "at",      "depart at",   "TIME");
@@ -273,8 +273,8 @@ fn main() {
     }
 
     let mut path = String::from(".");
-    if matches.opt_present("g") {
-        if let Some(s) = matches.opt_str("g") {
+    if matches.opt_present("p") {
+        if let Some(s) = matches.opt_str("p") {
             path = s;
         }
     }
