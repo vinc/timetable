@@ -27,6 +27,17 @@ pub struct Service {
     pub long_name: String
 }
 
+impl Service {
+    pub fn name(&self) -> String {
+        let short = self.short_name.clone();
+        let long = self.long_name.clone();
+        let mut parts = vec![short, long];
+        parts.retain(|s| !s.is_empty());
+
+        parts.join(" - ")
+    }
+}
+
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub struct Station {
     pub name: String
@@ -306,13 +317,11 @@ fn main() {
         let results = search.timetable(&from, &to, at);
         println!("{:13}{:11}{}", "Departures".bold(), "Arrivals".bold(), "Routes".bold());
         for service in results.iter().take(5) {
-            let short = service.short_name.clone();
-            let long = service.long_name.clone();
             println!(
                 "{} ......... {}   {}",
                 service.departure.format("%H:%M").to_string(),
                 service.arrival.format("%H:%M").to_string(),
-                vec![short, long].join(" - ")
+                service.name()
             );
         }
     } else if from.len() > 0 || to.len() > 0 {
