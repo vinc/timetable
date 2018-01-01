@@ -309,7 +309,7 @@ fn main() {
             let short = service.short_name.clone();
             let long = service.long_name.clone();
             println!(
-                "{:13}{:11}{}",
+                "{} ......... {}   {}",
                 service.departure.format("%H:%M").to_string(),
                 service.arrival.format("%H:%M").to_string(),
                 vec![short, long].join(" - ")
