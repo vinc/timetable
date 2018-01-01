@@ -327,5 +327,7 @@ fn main() {
                 println!("{}", station.name);
             }
         }
+    } else if !matches.opt_present("z") {
+        print_usage(opts);
     }
 }
