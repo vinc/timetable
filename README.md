@@ -1,7 +1,9 @@
 Timetable
 =========
 
-Construct timetables from General Transit Feed Specification (GTFS)
+Construct timetables from General Transit Feed Specification (GTFS).
+
+Visit http://transitfeeds.com to get gtfs zip files.
 
 
 Installation
@@ -29,7 +31,7 @@ Download and extract a gtfs zip file:
 
     $ timetable \
       --path ~/tmp/gtfs/transilien-sncf \
-      --url http://transitfeeds.com/p/transilien-sncf/207/latest/download
+      --url http://files.transilien.com/horaires/gtfs/export-TN-GTFS-LAST.zip
 
 Search a station:
 
