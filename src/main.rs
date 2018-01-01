@@ -2,6 +2,7 @@ extern crate transitfeed;
 extern crate chrono;
 extern crate colored;
 extern crate getopts;
+extern crate zip;
 
 use chrono::DateTime;
 use chrono::prelude::*;
@@ -230,10 +231,11 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let mut opts = Options::new();
-    opts.optopt("p",  "path",    "gtfs path",   "GTFS");
-    opts.optopt("f",  "from",    "depart from", "NAME");
-    opts.optopt("t",  "to",      "arrive to",   "NAME");
-    opts.optopt("a",  "at",      "depart at",   "TIME");
+    opts.optopt("p",  "path",    "gtfs path",     "GTFS");
+    opts.optopt("f",  "from",    "depart from",   "NAME");
+    opts.optopt("t",  "to",      "arrive to",     "NAME");
+    opts.optopt("a",  "at",      "depart at",     "TIME");
+    opts.optopt("z",  "zip",     "sync from zip", "ZIP");
     opts.optflag("d", "debug",   "enable debug output");
     opts.optflag("h", "help",    "print this message");
     opts.optflag("v", "version", "print version");
@@ -257,6 +259,15 @@ fn main() {
     if matches.opt_present("p") {
         if let Some(s) = matches.opt_str("p") {
             path = s;
+        }
+    }
+
+    if matches.opt_present("z") {
+        if let Some(archive) = matches.opt_str("z") {
+            if matches.opt_present("d") {
+                println!("{}: extracting '{}' to '{}'", "Debug".cyan(), archive, path);
+            }
+            gtfs::unzip_to_path(archive, path.clone());
         }
     }
 
@@ -304,11 +315,17 @@ fn main() {
                 vec![short, long].join(" - ")
             );
         }
-    } else {
+    } else if from.len() > 0 || to.len() > 0 {
         let results = search.stations();
         println!("{}", "Stations".bold());
         for station in results {
-            println!("{}", station.name);
+            let name = station.name.to_lowercase();
+
+            if from.len() > 0 && name.contains(&from) {
+                println!("{}", station.name);
+            } else if to.len() > 0 && to.contains(&from) {
+                println!("{}", station.name);
+            }
         }
     }
 }
