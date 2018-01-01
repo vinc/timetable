@@ -1,3 +1,4 @@
+use reqwest;
 use std::error::Error;
 use std::io::prelude::*;
 use std::fs::File;
@@ -8,9 +9,9 @@ use zip::ZipArchive;
 pub fn unzip_to_path(archive: String, path: String) {
     let reader = File::open(&archive).unwrap();
     let mut zip = ZipArchive::new(reader).unwrap();
+
     for i in 0..zip.len() {
-    let mut file = zip.by_index(i).unwrap();
-        println!("{}", file.name());
+        let mut file = zip.by_index(i).unwrap();
         let filename = Path::new(&path).join(file.name());
         let mut f = File::create(&filename).unwrap();
         let mut content = Vec::new();
@@ -20,6 +21,20 @@ pub fn unzip_to_path(archive: String, path: String) {
         if let Err(why) = f.write_all(&content) {
             panic!("Error: could not write '{}': {}", filename.display(), why.description());
         }
+    }
+}
+
+pub fn download_to_path(url: String, path: String) {
+    let mut res = reqwest::get(&url).unwrap();
+    if !res.status().is_success() {
+        panic!("Error: could not download '{}': {:?}", url, res.status());
+    }
+    let mut buf = Vec::new();
+    res.copy_to(&mut buf).unwrap();
+    let filename = Path::new(&path).join("gtfs.zip");
+    let mut f = File::create(&filename).unwrap();
+    if let Err(why) = f.write_all(&buf) {
+        panic!("Error: could not write '{}': {}", filename.display(), why.description());
     }
 }
 

@@ -1,7 +1,8 @@
-extern crate transitfeed;
 extern crate chrono;
 extern crate colored;
 extern crate getopts;
+extern crate reqwest;
+extern crate transitfeed;
 extern crate zip;
 
 use chrono::DateTime;
@@ -246,6 +247,7 @@ fn main() {
     opts.optopt("f",  "from",    "depart from",   "NAME");
     opts.optopt("t",  "to",      "arrive to",     "NAME");
     opts.optopt("a",  "at",      "depart at",     "TIME");
+    opts.optopt("u",  "url",     "sync from url", "URL");
     opts.optopt("z",  "zip",     "sync from zip", "ZIP");
     opts.optflag("d", "debug",   "enable debug output");
     opts.optflag("h", "help",    "print this message");
@@ -270,6 +272,20 @@ fn main() {
     if matches.opt_present("p") {
         if let Some(s) = matches.opt_str("p") {
             path = s;
+        }
+    }
+
+    if matches.opt_present("u") {
+        if let Some(url) = matches.opt_str("u") {
+            if matches.opt_present("d") {
+                println!("{}: downloading '{}' to '{}'", "Debug".cyan(), url, path);
+            }
+            gtfs::download_to_path(url, path.clone());
+            let archive = format!("{}/gtfs.zip", path);
+            if matches.opt_present("d") {
+                println!("{}: extracting '{}' to '{}'", "Debug".cyan(), archive, path);
+            }
+            gtfs::unzip_to_path(archive, path.clone());
         }
     }
 
@@ -336,7 +352,7 @@ fn main() {
                 println!("{}", station.name);
             }
         }
-    } else if !matches.opt_present("z") {
+    } else if !matches.opt_present("z") && !matches.opt_present("u") {
         print_usage(opts);
     }
 }
