@@ -6,6 +6,18 @@ Construct timetables from General Transit Feed Specification (GTFS).
 Visit http://transitfeeds.com to get gtfs zip files.
 
 
+TODO
+----
+
+- [ ] Add tests
+- [ ] Add config file
+- [ ] Add `--via` option
+- [ ] Add geolocation support
+- [ ] Download gtfs zip files
+- [ ] Add fuzzy search on station names
+- [ ] Pretty print route names
+
+
 Installation
 ------------
 
