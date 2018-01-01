@@ -1,4 +1,7 @@
-extern crate transitfeed; extern crate chrono; extern crate colored; extern crate getopts;
+extern crate transitfeed;
+extern crate chrono;
+extern crate colored;
+extern crate getopts;
 
 use chrono::DateTime;
 use chrono::prelude::*;
@@ -6,8 +9,9 @@ use colored::Colorize;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
-use std::path::Path;
-use transitfeed::{GTFSIterator, Route, RouteType, Stop, StopTime, Trip, Calendar};
+
+mod gtfs;
+use gtfs::GTFS;
 
 #[derive(PartialEq)]
 enum Step {
@@ -18,7 +22,6 @@ enum Step {
 pub struct Service {
     pub departure: DateTime<Local>,
     pub arrival: DateTime<Local>,
-    pub vehicule: String,
     pub short_name: String,
     pub long_name: String
 }
@@ -29,21 +32,20 @@ pub struct Station {
 }
 
 pub struct Search {
-    path: String,
+    gtfs: GTFS,
     debug: bool
 }
 
 impl Search {
     pub fn new(path: String) -> Search {
         let debug = false;
-        Search { path, debug }
+        let gtfs = GTFS::from_path(path);
+        Search { gtfs, debug }
     }
 
     pub fn stations(&self) -> Vec<Station> {
         let mut results = Vec::new();
-        let path = Path::new(&self.path).join("stops.txt");
-        let iter: GTFSIterator<_, Stop> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.stops() {
             if let Ok(entry) = result {
                 let name = entry.stop_name;
                 let station = Station { name };
@@ -60,9 +62,7 @@ impl Search {
         let mut n = 0;
         let mut origins = Vec::new();
         let mut destinations = Vec::new();
-        let path = Path::new(&self.path).join("stops.txt");
-        let iter: GTFSIterator<_, Stop> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.stops() {
             n += 1;
             if let Ok(entry) = result {
                 let name = entry.stop_name.to_lowercase();
@@ -89,9 +89,7 @@ impl Search {
         let mut departure_stop_times = Vec::new();
         let mut arrival_stop_times = Vec::new();
         let mut n = 0;
-        let path = Path::new(&self.path).join("stop_times.txt");
-        let iter: GTFSIterator<_, StopTime> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.stop_times() {
             n += 1;
             if let Ok(entry) = result {
                 match stop_ids.get(&entry.stop_id) {
@@ -121,9 +119,7 @@ impl Search {
         let mut service_ids = HashMap::new();
         let mut route_ids = HashMap::new();
         let mut n = 0;
-        let path = Path::new(&self.path).join("trips.txt");
-        let iter: GTFSIterator<_, Trip> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.trips() {
             n += 1;
             if let Ok(entry) = result {
                 let trip_id = entry.trip_id.clone();
@@ -142,9 +138,7 @@ impl Search {
 
         let mut routes = HashMap::new();
         let mut n = 0;
-        let path = Path::new(&self.path).join("routes.txt");
-        let iter: GTFSIterator<_, Route> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.routes() {
             n += 1;
             if let Ok(entry) = result {
                 let route_id = entry.route_id.clone();
@@ -159,9 +153,7 @@ impl Search {
 
         let mut services = HashMap::new();
         let mut n = 0;
-        let path = Path::new(&self.path).join("calendar.txt");
-        let iter: GTFSIterator<_, Calendar> = GTFSIterator::from_path(path.to_str().unwrap()).unwrap();
-        for result in iter {
+        for result in self.gtfs.calendar() {
             n += 1;
             if let Ok(entry) = result {
                 let service_id = entry.service_id;
@@ -200,22 +192,11 @@ impl Search {
                             continue;
                         }
                         if let Some(route) = routes.get(&trip.route_id) {
-                            let vehicule = match &route.route_type {
-                                &RouteType::LightRail => "Tram".into(),
-                                &RouteType::Subway => "Metro".into(),
-                                &RouteType::Rail => "Rail".into(),
-                                &RouteType::Bus => "Bus".into(),
-                                &RouteType::Ferry => "Ferry".into(),
-                                &RouteType::CableCar => "Cable car".into(),
-                                &RouteType::Gondola => "Gondola".into(),
-                                &RouteType::Funicular => "Funicular".into()
-                            };
                             let short_name = route.route_short_name.clone();
                             let long_name = route.route_long_name.clone();
                             let service = Service {
                                 departure,
                                 arrival,
-                                vehicule,
                                 short_name,
                                 long_name
                             };
