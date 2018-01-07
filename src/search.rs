@@ -10,6 +10,10 @@ enum Step {
     Arrival
 }
 
+fn strip_name(name: &str) -> String {
+    String::from(name).to_lowercase().replace("-", "")
+}
+
 pub struct Search {
     gtfs: GTFS,
 
@@ -77,16 +81,18 @@ impl Search {
 
     // Search stop candidates for origin and destination
     fn search_stops(&mut self, from: &str, to: &str) {
+        let origin = strip_name(from);
+        let destination = strip_name(to);
         let mut n = 0;
         for result in self.gtfs.stops() {
             n += 1;
             if let Ok(entry) = result {
-                let name = entry.stop_name.to_lowercase();
+                let name = strip_name(&entry.stop_name);
 
-                if name.contains(from) {
+                if name.contains(&origin) {
                     self.stop_ids.insert(entry.stop_id, Step::Departure);
                     self.origins.push(entry.stop_name);
-                } else if name.contains(to) {
+                } else if name.contains(&destination) {
                     self.stop_ids.insert(entry.stop_id, Step::Arrival);
                     self.destinations.push(entry.stop_name);
                 }
@@ -296,5 +302,14 @@ mod tests {
             assert_eq!(service.arrival.format("%H:%M").to_string(), String::from("08:10"));
             assert_eq!(service.name(), "Airport ⇒ Bullfrog");
         }
+    }
+
+    #[test]
+    fn test_timetable_fuzzy() {
+        let time = Local::now();
+        let naive_time = NaiveDateTime::parse_from_str("2017-12-21 07:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let time = time.timezone().from_local_datetime(&naive_time).earliest().unwrap();
+        let mut search = Search::new("examples/data/good_feed".into());
+        assert_eq!(search.timetable("AIRPORT", "Bullfrog", time).len(), 1);
     }
 }
