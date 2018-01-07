@@ -10,7 +10,7 @@ TODO
 ----
 
 - [x] Download gtfs zip files
-- [ ] Add tests
+- [x] Add tests
 - [ ] Add config file
 - [ ] Add `--via` option
 - [ ] Add geolocation support
