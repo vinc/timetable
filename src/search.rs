@@ -272,6 +272,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_stations() {
+        let search = Search::new("examples/data/good_feed".into());
+        let results = search.stations();
+
+        assert_eq!(results.len(), 9);
+        for station in results.iter().take(1) {
+            assert_eq!(station.name, "Amargosa Valley (Demo)");
+        }
+    }
+
+    #[test]
     fn test_timetable() {
         let time = Local::now();
         let naive_time = NaiveDateTime::parse_from_str("2017-12-21 07:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
