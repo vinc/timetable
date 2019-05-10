@@ -48,8 +48,8 @@ Download and extract a gtfs zip file:
 Search a station:
 
     $ timetable \
-      --path ~/tmp/gtfs/transilien-sncf
-      --from "font" \
+      --path ~/tmp/gtfs/transilien-sncf \
+      --from "font"
     Stations
     FERRIERES FONTENAY
     FONTAINE LE PORT
@@ -64,10 +64,10 @@ Search a station:
 Print timetable:
 
     $ timetable \
-      --path ~/tmp/gtfs/transilien-sncf
+      --path ~/tmp/gtfs/transilien-sncf \
       --from "fontainebleau" \
       --to "gare de lyon" \
-      --at "2017-12-21 08:00:00" \
+      --at "2017-12-21 08:00:00"
     Departures   Arrivals   Routes
     08:13 ......... 08:54   RER R - Montargis / Gare de Lyon
     09:06 ......... 09:47   RER R - Montargis / Gare de Lyon
