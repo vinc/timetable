@@ -8,7 +8,7 @@ license = "MIT"
 
 [dependencies]
 transitfeed = { git = "https://github.com/bfrog/transitfeed" }
-chrono = "0.4.0"
+chrono = "0.4.7"
 getopts = "0.2.15"
 colored = "1.6.0"
 zip = "0.2.6"
