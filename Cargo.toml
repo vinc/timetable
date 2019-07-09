@@ -7,9 +7,9 @@ repository = "https://github.com/vinc/timetable"
 license = "MIT"
 
 [dependencies]
-transitfeed = { git = "https://github.com/bfrog/transitfeed" }
 chrono = "0.4.0"
-getopts = "0.2.15"
 colored = "1.6.0"
-zip = "0.2.6"
+getopts = "0.2.15"
 reqwest = "0.9.16"
+transitfeed = "0.3.0"
+zip = "0.2.6"
