@@ -1,13 +1,17 @@
 extern crate chrono;
 extern crate colored;
+extern crate geodate;
 extern crate getopts;
 extern crate reqwest;
 extern crate transitfeed;
 extern crate zip;
+extern crate regex;
 
 use chrono::prelude::*;
 use colored::Colorize;
+use geodate::geodate::get_formatted_date;
 use getopts::Options;
+use regex::RegexSet;
 use std::env;
 
 mod gtfs;
@@ -35,6 +39,7 @@ fn main() {
     opts.optopt("a",  "at",      "depart at",     "TIME");
     opts.optopt("u",  "url",     "sync from url", "URL");
     opts.optopt("z",  "zip",     "sync from zip", "ZIP");
+    opts.optflag("g", "geodate", "use geodate format");
     opts.optflag("d", "debug",   "enable debug output");
     opts.optflag("h", "help",    "print this message");
     opts.optflag("v", "version", "print version");
@@ -84,6 +89,11 @@ fn main() {
         }
     }
 
+    let mut use_geodate_format = false;
+    if matches.opt_present("g") {
+        use_geodate_format = true;
+    }
+
     let mut search = Search::new(path);
 
     if matches.opt_present("d") {
@@ -107,7 +117,22 @@ fn main() {
     let mut at = Local::now();
     if matches.opt_present("a") {
         if let Some(s) = matches.opt_str("a") {
-            if let Ok(naive_dt) = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S") {
+            let set = RegexSet::new(&[
+                r"\d+-\d+-\d+ \d+:\d+:\d+",
+                r"\d+:\d+:\d+",
+                r"\d+:\d+",
+            ]).unwrap();
+            let matches = set.matches(&s);
+            let format = if matches.matched(0) {
+                "%Y-%m-%d %H:%M:%S"
+            } else if matches.matched(1) {
+                "%H:%M:%S"
+            } else if matches.matched(2) {
+                "%H:%M"
+            } else {
+                "%s"
+            };
+            if let Ok(naive_dt) = NaiveDateTime::parse_from_str(&s, format) {
                 if let Some(dt) = at.timezone().from_local_datetime(&naive_dt).earliest() {
                     at = dt;
                 }
@@ -119,12 +144,18 @@ fn main() {
         let results = search.timetable(&from, &to, at);
         println!("{:13}{:11}{}", "Departures".bold(), "Arrivals".bold(), "Routes".bold());
         for service in results.iter().take(5) {
-            println!(
-                "{} ......... {}   {}",
-                service.departure.format("%H:%M").to_string(),
-                service.arrival.format("%H:%M").to_string(),
-                service.name()
-            );
+
+            let mut departure = service.departure_time.format("%H:%M").to_string();
+            let mut arrival = service.arrival_time.format("%H:%M").to_string();
+
+            if use_geodate_format {
+                let format = "%c:%b";
+                let longitude = service.arrival_longitude;
+                departure = get_formatted_date(format, service.departure_time.timestamp(), longitude);
+                arrival = get_formatted_date(format, service.arrival_time.timestamp(), longitude);
+            }
+
+            println!("{} ......... {}   {}", departure, arrival, service.name());
         }
     } else if from.len() > 0 || to.len() > 0 {
         let results = search.stations();

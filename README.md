@@ -79,4 +79,4 @@ Print timetable:
 License
 -------
 
-Copyright (c) 2018 Vincent Ollivier. Released under MIT.
+Copyright (c) 2018-2019 Vincent Ollivier. Released under MIT.

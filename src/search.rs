@@ -20,6 +20,7 @@ pub struct Search {
     origins: Vec<String>,
     destinations: Vec<String>,
     stop_ids: HashMap<String, Step>,
+    stops: HashMap<String, transitfeed::Stop>,
     departure_stop_times: Vec<transitfeed::StopTime>,
     arrival_stop_times: Vec<transitfeed::StopTime>,
 
@@ -44,11 +45,13 @@ impl Search {
             arrival_stop_times: Vec::new(),
 
             route_ids: HashMap::new(),
-            routes: HashMap::new(),
             service_ids: HashMap::new(),
-            services: HashMap::new(),
             stop_ids: HashMap::new(),
             trip_ids: HashMap::new(),
+
+            routes: HashMap::new(),
+            services: HashMap::new(),
+            stops: HashMap::new(),
             trips: HashMap::new(),
 
             debug: false
@@ -87,14 +90,18 @@ impl Search {
         for result in self.gtfs.stops() {
             n += 1;
             if let Ok(entry) = result {
-                let name = strip_name(&entry.stop_name);
+                let id = entry.stop_id.clone();
+                let name = entry.stop_name.clone();
+                let stripped_name = strip_name(&entry.stop_name);
 
-                if name.contains(&origin) {
-                    self.stop_ids.insert(entry.stop_id, Step::Departure);
-                    self.origins.push(entry.stop_name);
-                } else if name.contains(&destination) {
-                    self.stop_ids.insert(entry.stop_id, Step::Arrival);
-                    self.destinations.push(entry.stop_name);
+                if stripped_name.contains(&origin) {
+                    self.stop_ids.insert(id.clone(), Step::Departure);
+                    self.origins.push(name.clone());
+                    self.stops.insert(id.clone(), entry);
+                } else if stripped_name.contains(&destination) {
+                    self.stop_ids.insert(id.clone(), Step::Arrival);
+                    self.destinations.push(name.clone());
+                    self.stops.insert(id.clone(), entry);
                 }
             }
         }
@@ -219,20 +226,24 @@ impl Search {
         let mut results = Vec::new();
         for stop_time in self.arrival_stop_times.iter() {
             let trip_id = stop_time.trip_id.clone();
-            if let Some(departure) = self.trip_ids.get(&trip_id) {
-                let arrival = midnight + stop_time.arrival_time.duration();
-                let departure = *departure;
-                if arrival > departure {
+            if let Some(departure_time) = self.trip_ids.get(&trip_id) {
+                let arrival_time = midnight + stop_time.arrival_time.duration();
+                let departure_time = *departure_time;
+                if arrival_time > departure_time {
                     if let Some(trip) = self.trips.get(&trip_id) {
                         if !self.services.is_empty() && !self.services.contains_key(&trip.service_id) {
                             continue;
                         }
                         if let Some(route) = self.routes.get(&trip.route_id) {
+                            let stop_id = stop_time.stop_id.clone();
+                            let stop = self.stops.get(&stop_id).unwrap();
+                            let arrival_longitude = stop.stop_lon.clone();
                             let short_name = route.route_short_name.clone();
                             let long_name = route.route_long_name.clone();
                             let service = Service {
-                                departure,
-                                arrival,
+                                arrival_longitude,
+                                departure_time,
+                                arrival_time,
                                 short_name,
                                 long_name
                             };
@@ -246,7 +257,7 @@ impl Search {
         if self.debug {
             println!("");
         }
-        results.sort_by(|a, b| a.departure.cmp(&b.departure));
+        results.sort_by(|a, b| a.departure_time.cmp(&b.departure_time));
         results
     }
 }
@@ -257,8 +268,9 @@ pub struct Station {
 }
 
 pub struct Service {
-    pub departure: DateTime<Local>,
-    pub arrival: DateTime<Local>,
+    pub arrival_longitude: f64,
+    pub departure_time: DateTime<Local>,
+    pub arrival_time: DateTime<Local>,
     pub short_name: String,
     pub long_name: String
 }
@@ -298,8 +310,8 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         for service in results.iter() {
-            assert_eq!(service.departure.format("%H:%M").to_string(), String::from("08:00"));
-            assert_eq!(service.arrival.format("%H:%M").to_string(), String::from("08:10"));
+            assert_eq!(service.departure_time.format("%H:%M").to_string(), String::from("08:00"));
+            assert_eq!(service.arrival_time.format("%H:%M").to_string(), String::from("08:10"));
             assert_eq!(service.name(), "Airport ⇒ Bullfrog");
         }
     }
