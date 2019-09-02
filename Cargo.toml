@@ -7,7 +7,7 @@ repository = "https://github.com/vinc/timetable"
 license = "MIT"
 
 [dependencies]
-chrono = "0.4.0"
+chrono = "0.4.8"
 colored = "1.6.0"
 geodate = "0.3.0"
 getopts = "0.2.15"
